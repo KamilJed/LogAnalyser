@@ -9,7 +9,10 @@ public class Keyword {
         patterns.put("E-mail", "((?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,}))");
         patterns.put("Airport Code", "([A-Z]{3})");
         patterns.put("Password", "password ([^ ]+) ?");
-        patterns.put("Date", "([0-9]{2}-[0-9]{2}-2[0-9]{3})");
+        // date of example 14-09-2002
+        patterns.put("Date-type1", "([0-9]{2}-[0-9]{2}-2[0-9]{3})");
+        // date of example Mon Feb 14 2022 00:00:00
+        patterns.put("Date-type2", "([A-Z][a-z]{2} [A-Z][a-z]{2} [0-3]?[0-9] [1-9][0-9]* [0-1][0-9]:[0-5][0-9]:[0-5][0-9] (.+)?)");
         keywordPatterns = Collections.unmodifiableMap(patterns);
     }
     String keyword;
@@ -45,7 +48,7 @@ public class Keyword {
     }
 
     public boolean isDate(){
-        return description.toLowerCase(Locale.ROOT).equals("date");
+        return description.toLowerCase(Locale.ROOT).contains("date");
     }
 
     static class RelatedKeyword {

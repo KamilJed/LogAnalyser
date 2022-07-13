@@ -35,6 +35,18 @@ public class LogAnalyserLearner {
         createAnalyzerRegexes();
     }
 
+    public void saveRegexesToFile(File fileToSave){
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(fileToSave))){
+            objectOutputStream.writeObject(scenarioRegexes);
+            objectOutputStream.flush();
+        }
+        catch (IOException ignored){}
+    }
+
+    public Map<Scenario, Set<String>> getScenarioRegexes() {
+        return scenarioRegexes;
+    }
+
     private void createAnalyzerRegexes() {
         scenarioRegexes = new HashMap<>();
         for (Feature feature: features.keySet()){
@@ -59,25 +71,22 @@ public class LogAnalyserLearner {
     private void createRegexFromLogLine(String logLine, Scenario scenario) {
         boolean isJsonLine = JSON_CHECK_PATTERN.matcher(logLine).find();
         for (ScenarioStep step : scenario.getScenarioSteps()){
-            String regex = logLine;
-            boolean validRegex = false;
+            String regex = logLine.replace("{", "\\{").replace("[", "\\[");
             for (Keyword keyword : step.getKeywords()){
                 if (keyword.isDate()){
-                    checkVariousDateFormats(logLine, keyword);
+                    keyword = checkVariousDateFormats(logLine, keyword);
+                    regex = regex.replace("GMT+0100 (Central European Standard Time)", "");
                 }
                 if (logLine.contains(keyword.getKeyword())){
-                    validRegex = true;
                     regex = regex.replace(keyword.getKeyword(), Keyword.keywordPatterns.get(keyword.getDescription()));
                 }
             }
-            if (validRegex){
-                if (!scenarioRegexes.containsKey(scenario)){
-                    scenarioRegexes.put(scenario, new HashSet<>());
-                }
-                if (isJsonLine)
-                    regex = generalizeJSON(regex);
-                scenarioRegexes.get(scenario).add(regex);
+            if (!scenarioRegexes.containsKey(scenario)){
+                scenarioRegexes.put(scenario, new HashSet<>());
             }
+            if (isJsonLine)
+                regex = generalizeJSON(regex);
+            scenarioRegexes.get(scenario).add(regex);
         }
     }
 
@@ -92,17 +101,19 @@ public class LogAnalyserLearner {
         return jsonString;
     }
 
-    private void checkVariousDateFormats(String logLine, Keyword keyword){
+    private Keyword checkVariousDateFormats(String logLine, Keyword keyword){
+        Keyword newDateKeyword = keyword;
         String dateString = keyword.getKeyword();
         try {
             Date date = new SimpleDateFormat("dd-MM-yyyy").parse(dateString);
             SimpleDateFormat dateFormat = new SimpleDateFormat("E MMM d yyyy HH:mm:ss");
-            String dateFormatted = dateFormat.format(date).concat(" GMT+0100 (Central European Standard Time)");
+            String dateFormatted = dateFormat.format(date);
             if (logLine.contains(dateFormatted)){
-                keyword.setKeyword(dateFormatted);
+                newDateKeyword = new Keyword(dateFormatted, "Date-type2");
             }
         } catch (ParseException e) {
             e.printStackTrace();
         }
+        return newDateKeyword;
     }
 }
